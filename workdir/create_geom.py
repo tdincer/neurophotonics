@@ -203,12 +203,13 @@ class Shank:
         if show:
             plt.show()
 
-    def init_boxes(self):
+    def init_e_boxes(self):
         # find the greatest number of pixels that can fit on the width of the shank
         row_count = np.ceil((self.w + self.sw) / (self.bw + self.sw)) - 1
-
         # find the margin for each side of the row
-        row_margin = (self.w - (row_count * self.bw + (row_count - 1) * self.sw)) / 2
+        row_margin = (
+            self.w - (row_count * self.bw + (row_count - 1) * self.sw)
+        ) / 2
 
         # find the greatest number of pixels that can fit on the length of the shank
         column_count = np.ceil((self.h + self.sh) / (self.bh + self.sh)) - 1
@@ -217,10 +218,6 @@ class Shank:
             self.h - (column_count * self.bh + (column_count - 1) * self.sh)
         ) / 2
 
-        print(row_count)
-        print(column_count)
-        print(int(row_count))
-        print(int(column_count))
         self.boxes = [
             Square(self.bh, self.bw)
             for i in range(int(row_count))
@@ -239,14 +236,9 @@ class Shank:
             self.bh + self.sh,
         )
 
-        print(len(xs))
-        print(len(zs))
-
         coords = [[x, 0, z] for x in xs for z in zs]
-        # print(coords[0])
 
         [i[0].translate(i[1]) for i in zip(self.boxes, coords)]
-
 
 class ShankGroup:
     def __init__(
