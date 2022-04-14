@@ -7,19 +7,20 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 
 class Square:
-    def __init__(self, h, w, name=""):
-        self.h = h
-        self.w = w
+    def __init__(self, h, w, name="", is_emitter=None):
+        self.height = h
+        self.width = w
         self.name = name
+        self.is_emitter = is_emitter
 
         if np.all([h, w]):
             self.make_vertices()
 
     def make_vertices(self):
-        self.tl = np.array([-self.w / 2, 0, self.h / 2])  # top left
-        self.bl = np.array([-self.w / 2, 0, -self.h / 2])  # bottom left
-        self.br = np.array([self.w / 2, 0, -self.h / 2])  # bottom right
-        self.tr = np.array([self.w / 2, 0, self.h / 2])  # top right
+        self.tl = np.array([-self.width / 2, 0, self.height / 2])  # top left
+        self.bl = np.array([-self.width / 2, 0, -self.height / 2])  # bottom left
+        self.br = np.array([self.width / 2, 0, -self.height / 2])  # bottom right
+        self.tr = np.array([self.width / 2, 0, self.height / 2])  # top right
 
         self.centroid = np.array([0.0, 0.0, 0.0])
         self.n = np.array([0.0, 1.0, 0.0])  # normal vector of the surface
@@ -67,7 +68,7 @@ class Square:
         ax.set_xlabel("X")
         ax.set_ylabel("Y")
         ax.set_zlabel("Z")
-        delta = self.h / 2
+        delta = self.height / 2
         ax.set_xlim(self.centroid[0] - delta, self.centroid[0] + delta)
         ax.set_ylim(self.centroid[1] - delta, self.centroid[1] + delta)
         ax.set_zlim(self.centroid[2] - delta, self.centroid[2] + delta)
@@ -84,9 +85,9 @@ class Shank:
     ):
 
         if len(shank_dimensions) == 3:
-            self.h = shank_dimensions[0]  # height of shank
-            self.w = shank_dimensions[1]  # width of shank
-            self.t = shank_dimensions[2]  # length between flat bottom and tip
+            self.height = shank_dimensions[0]  # height of shank
+            self.width = shank_dimensions[1]  # width of shank
+            self.tip = shank_dimensions[2]  # length between flat bottom and tip
             self.make_vertices()
 
         if np.all(e_box_dimensions) and len(e_separation_dimensions) == 2:
@@ -94,21 +95,43 @@ class Shank:
             self.e_box_width = e_box_dimensions[1]
             self.e_sep_height = e_separation_dimensions[0]
             self.e_sep_width = e_separation_dimensions[1]
-            self.init_boxes()
+            self.init_e_boxes()
+        else:
+            self.e_pixels = None
 
         if np.all(d_box_dimensions) and len(d_separation_dimensions) == 2:
             self.d_box_height = d_box_dimensions[0]
             self.d_box_width = d_box_dimensions[1]
             self.d_sep_height = d_separation_dimensions[0]
             self.d_sep_width = d_separation_dimensions[1]
-            self.init_boxes()
+            self.init_d_boxes()
+        else:
+            self.d_pixels = None
+
+        if self.d_pixels:
+            self.boxes = self.d_pixels
+        elif self.e_pixels:
+            self.boxes = self.e_pixels
+        else:
+            self.boxes = None
+
+        # This code will set boxes equal to all availible pixels
+        # if self.e_pixels:
+        #     if self.d_pixels:
+        #         self.boxes = self.e_pixels + self.d_pixels
+        #     else:
+        #         self.boxes = self.e_pixels
+        # elif self.d_pixels:
+        #     self.boxes = self.d_pixels
+        # else:
+        #     self.boxes = None
 
     def make_vertices(self):
-        self.tl = np.array([-self.w / 2, 0, self.h / 2])  # top left
-        self.bl = np.array([-self.w / 2, 0, -self.h / 2])  # bottom left
-        self.br = np.array([self.w / 2, 0, -self.h / 2])  # bottom right
-        self.tr = np.array([self.w / 2, 0, self.h / 2])  # top right
-        self.tip = np.array([0, 0, -self.t / 2])  # tip
+        self.tl = np.array([-self.width / 2, 0, self.height / 2])  # top left
+        self.bl = np.array([-self.width / 2, 0, -self.height / 2])  # bottom left
+        self.br = np.array([self.width / 2, 0, -self.height / 2])  # bottom right
+        self.tr = np.array([self.width / 2, 0, self.height / 2])  # top right
+        self.tip = np.array([0, 0, -self.tip / 2])  # tip
 
         self.centroid = np.array([0, 0, 0])
         self.n = np.array([0, 1, 0])  # normal vector of the surface
@@ -184,7 +207,7 @@ class Shank:
         ax.set_xlabel("X")
         ax.set_ylabel("Y")
         ax.set_zlabel("Z")
-        delta = self.h / 2
+        delta = self.height / 2
         ax.set_xlim(self.centroid[0] - delta, self.centroid[0] + delta)
         ax.set_ylim(self.centroid[1] - delta, self.centroid[1] + delta)
         ax.set_zlim(self.centroid[2] - delta, self.centroid[2] + delta)
@@ -202,46 +225,54 @@ class Shank:
 
         ax.scatter(xs, zs, s=0)
 
-        for box in self.boxes:
-            xs, _, zs = box.vertices_positions(precision=13)
-            verts = list(zip(xs, zs))
-            poly = plt.Polygon(verts, ec="k", fc="green")
-            ax.add_patch(poly)
-            ax.scatter(xs, zs, s=0)
+        if self.e_pixels:
+            for box in self.e_pixels:
+                xs, _, zs = box.vertices_positions(precision=13)
+                verts = list(zip(xs, zs))
+                poly = plt.Polygon(verts, ec="k", fc="blue")
+                ax.add_patch(poly)
+                ax.scatter(xs, zs, s=0)
+        if self.d_pixels:
+            for box in self.d_pixels:
+                xs, _, zs = box.vertices_positions(precision=13)
+                verts = list(zip(xs, zs))
+                poly = plt.Polygon(verts, ec="k", fc="green")
+                ax.add_patch(poly)
+                ax.scatter(xs, zs, s=0)
 
         if show:
             plt.show()
 
 
-    def count(shank_length, box_length, box_sep):
-        return np.ceil((shank_length + box_sep) / (box_length + box_sep))
+    def count(self, shank_length, box_length, box_sep):
+        return np.ceil((shank_length + box_sep) / (box_length + box_sep)) -1
 
 
-    def margin(shank_length, box_length, sep_length, count):
-        return shank_length - (count * box_length + (count - 1) * sep_length)
+    def margin(self, shank_length, box_length, sep_length, count):
+        return (shank_length - (count * box_length + (count - 1) * sep_length)) / 2
 
 
     def e_centroids(self):
         # find the greatest number of pixels that can fit on the width of the shank
-        row_count = count(self.w, self.e_box_width, self.e_sep_width) 
+        row_count = self.count(self.width, self.e_box_width, self.e_sep_width) 
         # find the margin for each side of the row
-        row_margin = margin(self.w, self.e_box_width, self.e_sep_width, row_count)
+        row_margin = self.margin(self.width, self.e_box_width, self.e_sep_width, row_count)
 
         # find the greatest number of pixels that can fit on the length of the shank
-        column_count = count(self.h, self.e_box_height, self.e_sep_height) 
+        column_count = self.count(self.height, self.e_box_height, self.e_sep_height) 
         # find the margin for each side of the column
-        column_margin =  margin(self.h, self.e_box_height, self.e_sep_height, column_count)
+        column_margin = self.margin(self.height, self.e_box_height, self.e_sep_height, column_count)
 
 
         # calculate the x & z positions of boxes
         xs = np.arange(
-            self.bl[0] + row_margin + self.e_box_width / 2,
-            self.w/2,
+            self.bl[0] + row_margin + self.e_box_width * 3 / 2,
+            self.width/2,
             self.e_box_width + self.e_sep_width,
         )
         zs = np.arange(
-            self.bl[2] + column_margin + self.e_box_height / 2,
-            self.h/2,
+            self.bl[2] + column_margin + self.e_box_height,
+            self.height/2,
             self.e_box_height + self.e_sep_height,
         )
 
@@ -250,46 +281,48 @@ class Shank:
 
     def d_centroids(self):
         # find the greatest number of pixels that can fit on the width of the shank
-        row_count = count(self.w, self.d_box_width, self.d_sep_width) 
+        row_count = self.count(self.width, self.e_box_width, self.e_sep_width) 
         # find the margin for each side of the row
-        row_margin = margin(self.w, self.d_box_width, self.d_sep_width, row_count)
+        row_margin = self.margin(self.width, self.e_box_width, self.e_sep_width, row_count)
 
         # find the greatest number of pixels that can fit on the length of the shank
-        column_count = count(self.h, self.d_box_height, self.d_sep_height) 
+        column_count = self.count(self.height, self.e_box_height, self.e_sep_height) 
         # find the margin for each side of the column
-        column_margin =  margin(self.h, self.d_box_height, self.d_sep_height, column_count)
+        column_margin = self.margin(self.height, self.e_box_height, self.e_sep_height, column_count)
 
         # calculate the x & z positions of boxes
         xs = np.arange(
-            self.bl[0] + row_margin + self.d_box_width / 2,
-            self.w/2,
-            self.e_box_width + self.d_sep_width,
+            self.bl[0] + row_margin + self.e_box_width / 2 - 2.5,
+            self.width/2 - row_margin,
+            self.d_box_width + self.d_sep_width,
         )
         zs = np.arange(
-            self.bl[2] + column_margin + self.d_box_height / 2,
-            self.h/2,
+            self.bl[2] + column_margin + self.e_box_height / 2 - 2.5,
+            self.height/2 - column_margin,
             self.d_box_height + self.d_sep_height,
         )
 
         candidates = [[x, 0, z] for x in xs for z in zs]
-        e_pixels = e_centroids()
-        e_xs = [centroid[0] for centroid in e_pixels]
-        e_zs = [centroid[2] for centroid in e_pixels]
+        e_pixels = self.e_centroids()
+        e_xs = set([centroid[0] for centroid in e_pixels])
+        e_zs = set([centroid[2] for centroid in e_pixels])
+        x_overlaps = [x for x in xs for ex in e_xs if(abs(x-ex) <= self.e_box_width/2)]
+        z_overlaps = [z for z in zs for ez in e_zs if(abs(z-ez) <= self.e_box_height/2)]
         return [candidate for candidate in candidates
-                if (not (candidate[0] + self.d_box_width/2 + self.e_box_width/2 in e_xs))
-                and (not (candidate[2] + self.d_box_height/2 + self.e_box_height/2 in e_zs))]
+            if not ( (candidate[0] in x_overlaps) and (candidate[2] in z_overlaps) )
+        ]
         
 
     def init_e_boxes(self):
-        coords = e_centroids()
-        self.boxes = [Square(self.e_box_height, self.e_box_width) for coor in coords]
-        [i[0].translate(i[1]) for i in zip(self.boxes, coords)]
+        coords = self.e_centroids()
+        self.e_pixels = [Square(self.e_box_height, self.e_box_width, True) for coor in coords]
+        [i[0].translate(i[1]) for i in zip(self.e_pixels, coords)]
 
 
     def init_d_boxes(self):
-        coords = d_centroids()
-        self.boxes = [Square(self.d_box_height, self.d_box_width) for coor in coords]
-        [i[0].translate(i[1]) for i in zip(self.boxes, coords)]
+        coords = self.d_centroids()
+        self.d_pixels = [Square(self.d_box_height, self.d_box_width, False) for coor in coords]
+        [i[0].translate(i[1]) for i in zip(self.d_pixels, coords)]
 
 
 class ShankGroup:
