@@ -267,12 +267,12 @@ class Shank:
         # calculate the x & z positions of boxes
         xs = np.arange(
             self.bl[0] + row_margin + self.e_box_width * 3 / 2,
-            self.width/2,
+            self.width/2 - row_margin,
             self.e_box_width + self.e_sep_width,
         )
         zs = np.arange(
             self.bl[2] + column_margin + self.e_box_height,
-            self.height/2,
+            self.height/2 - column_margin,
             self.e_box_height + self.e_sep_height,
         )
 
